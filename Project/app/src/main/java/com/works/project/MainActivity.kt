@@ -1,5 +1,8 @@
 package com.works.project
 
+import android.content.Intent
+import android.content.SharedPreferences
+import android.content.SharedPreferences.Editor
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -9,13 +12,13 @@ import android.widget.EditText
 import android.widget.Toast
 import com.google.gson.Gson
 import com.works.project.configs.ApiClient
+import com.works.project.configs.Util
 import com.works.project.models.JWTModel
 import com.works.project.models.SendUser
 import com.works.project.services.DummyService
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import java.util.concurrent.Callable
 
 
 class MainActivity : AppCompatActivity() {
@@ -25,9 +28,24 @@ class MainActivity : AppCompatActivity() {
     lateinit var btnLogin: Button
     lateinit var dummyService: DummyService
 
+    lateinit var sharedPreferences: SharedPreferences
+    lateinit var editor:Editor
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        sharedPreferences = getSharedPreferences("user", MODE_PRIVATE)
+        editor = sharedPreferences.edit()
+        val jwtSt = sharedPreferences.getString("jwt", "")
+        if ( jwtSt != null && jwtSt != "") {
+            val gson = Gson()
+            val jwt = gson.fromJson(jwtSt,JWTModel::class.java)
+            Util.user = jwt
+            val intent = Intent(this@MainActivity, Product::class.java)
+            startActivity(intent)
+            finish()
+        }
 
         dummyService = ApiClient().getClient().create(DummyService::class.java)
         txtUsername = findViewById(R.id.txtUsername)
@@ -62,7 +80,14 @@ class MainActivity : AppCompatActivity() {
                         if (jwt != null) {
                             val gson = Gson()
                             val stJwt = gson.toJson(jwt)
-                            Log.d("stJwt", stJwt)
+                            editor.putString("jwt", stJwt)
+                            editor.putString("token", jwt.token)
+                            editor.commit()
+
+                            val intent = Intent(this@MainActivity, Product::class.java)
+                            startActivity(intent)
+                            finish()
+
                         }
                     }else {
                         Toast.makeText(this@MainActivity, "Username or Password Fail!", Toast.LENGTH_SHORT).show()
